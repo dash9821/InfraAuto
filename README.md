@@ -29,16 +29,77 @@ Run `terraform plan` to see that the resource are getting created correctly.
 
 Run `terraform apply --auto-approve` to create the resources on your aws account.
 
-Once this is done you can add the backend block to the terraform block in `provider.tf`, i.e.  
+Once this is done you can add the backend block to the terraform block in `provider.tf`, i.e.:
+
 ```
     backend "s3" {
-        bucket = "dashlearn-tfstate-s3-9821"
+        bucket         = "dashlearn-tfstate-s3-9821"
+        key            = "global/tfstate/default/terraform.tfstate"
+        region         = "ap-south-1"
         dynamodb_table = "state-lock"
-        key = "global/tfstate/terraform.tfstate"
-        region = "ap-south-1"
-        encrypt = true
     }
 ```
-After adding this you have to run `terraform init` and you'll be prompted to move the existing state file over to the remote backend, type yes to move it to the S3 bucket. 
+After adding this you have to run `terraform init -migrate-state` and you'll be prompted to move the existing state file over to the remote backend, type yes to move it to the S3 bucket. 
 
 Once this is done you now have a remote backend for your terraform code which also has state locking which allows multiple users to work on the code and also preventing from conflicting code being executed on using state-locking.
+
+## Step 2:
+
+After setting up the remote backend now we can begin to create different workspaces for our different environments. Run the following commands:
+```
+terraform workspace new nonprod
+terraform init
+
+terraform workspace new staging
+terraform init
+
+terraform workspace new prod
+terraform init
+
+#To switch to other workspaces use terraform workspce select command.
+```
+Once you've initialized all the workspaces there'll be an empty tf-state file create in your S3 bucket at the path `env:/WORKSPACE/global/tfstate/default/terraform.tfstate`
+
+## Step 3:
+
+The directory structure of the terraform code looks like the following:
+
+```
+├── main.tf
+├── provider.tf
+├── default-vars.tf
+├── modules
+│   ├── EKS
+│   │   └── eks.tf
+│   │   └── eks-vars.tf
+│   ├── EFS
+│   │   └── efs.tf
+│   │   └── efs-vars.tf
+│   ├── ASG
+│   │   └── asg.tf
+│   │   └── asg-vars.tf
+├── environments
+│   ├── nonprod
+│   │   └── vars.tf
+│   ├── staging
+│   │   └── vars.tf
+│   └── prod
+│       └── vars.tf
+```
+
+We'll be using modules to combine a few resources to make things a little less cluttered in our `main.tf` file. We'll call these modules by using the following code in our `main.tf` file:
+
+```
+module "eks" {
+  source             = "./modules/EKS"
+  cluster_name       = "my-eks-cluster"
+  cluster_role_arn   = "arn:aws:iam::123456789012:role/EKSClusterRole"
+  subnet_ids         = ["subnet-abcde123", "subnet-12345fgh"]
+  node_group_name    = "my-eks-nodes"
+  node_role_arn      = "arn:aws:iam::123456789012:role/EKSNodeRole"
+  desired_capacity   = 3
+  max_size           = 5
+  min_size           = 1
+}
+```
+
