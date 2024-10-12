@@ -6,11 +6,10 @@ terraform {
         }
     }
     backend "s3" {
-        bucket = "dashlearn-tfstate-s3-9821"
+        bucket         = "dashlearn-tfstate-s3-9821"
+        key            = "global/tfstate/default/terraform.tfstate"
+        region         = "ap-south-1"
         dynamodb_table = "state-lock"
-        key = "global/tfstate/terraform.tfstate"
-        region = "ap-south-1"
-        encrypt = true
     }
 }
 
