@@ -103,3 +103,28 @@ module "eks" {
 }
 ```
 
+## Step 4:
+
+### Configuring AWS credentials to use them in GitHub actions:
+
+Use the GitHub documentation: https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions
+
+First create an OIDC provider by going into AWS IAM, select providers and then Add provider.
+Select OpenID Connect and then in the Provider URL add: `https://token.actions.githubusercontent.com`
+In the audience section enter: `sts.amazonaws.com`. Click create to make the OIDC.
+
+Now Go to IAM Role and create a Role:
+Select Web Identity.
+And in Identity provider selecect `https://token.actions.githubusercontent.com`. For audience select `sts.amazonaws.com` and in GitHub Organization enter your GitHub username. If you enter your GitHub repo name as well then the trust policy will only allow that particular repo to have access to AWS, that field is not mandatory.
+Click next and then add the Admin policy to the role and click create.
+
+To get AWS credentials in our workflow we'll add it to our job by using the following step:
+```
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ap-south-1
+          role-to-assume: arn:aws:iam::941377147400:role/GitHub-Role
+```
+Once this step is run the AWS credentails will be configured for the job.
