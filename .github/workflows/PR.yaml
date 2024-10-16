@@ -60,7 +60,7 @@ jobs:
           echo "Workspaces CSV: $workspaces_csv"
           workspaces_json=$(echo "$workspaces_csv" | tr ',' '\n' | jq -R . | jq -s .)
           echo $workspaces_json
-          echo "workspaces_json=$workspaces_json" >> "$GITHUB_OUTPUT"
+          echo "::set-output name=workspaces_json::$workspaces_json"
   
 
   Terraform_Plan:
