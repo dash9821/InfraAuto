@@ -65,7 +65,7 @@ jobs:
     if: needs.get_workspace_list.outputs.workspaces_csv != ''
     strategy:
       matrix:
-        workspace: ${{ fromJson(needs.get_workspace_list.outputs.workspaces | toJson) }}
+        workspace: [${{ fromJson(needs.get_workspace_list.outputs.workspaces | toJson) }}]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
