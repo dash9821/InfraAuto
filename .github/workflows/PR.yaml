@@ -23,7 +23,50 @@ jobs:
         run: |
           terraform fmt -check -diff
           cd environments && terraform fmt -check -recursive -diff
-  
+  get_workspace_list:
+    name: List Workspaces
+    runs-on: [ubuntu-latest]
+    outputs:
+      workspaces: ${{ steps.get_workspaces.outputs.workspaces }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          teraform_version: v1.9.7
+          terraform_wrapper: false
+      
+      - name: Initialize terraform 
+        run: terraform init
+
+      - name: Get Workspaces
+        id: get_workspaces
+        run: |
+          workspaces=$(terraform workspace list | sed 's/* //g')
+          echo "::set-output name=workspaces::$(echo $workspaces | tr '\n' ' ')"
+
+  Terraform_Plan:
+    needs: get_workspace_list
+    strategy:
+      matrix:
+        workspace: ${{ fromJson(needs.get_workspace_list.outputs.workspaces) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          teraform_version: v1.9.7
+          terraform_wrapper: false
+      
+      - name: Initialize terraform 
+        run: |
+          terraform init
+          terraform workspace select ${{matrix.workspace}}
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -31,6 +74,7 @@ jobs:
           aws-region: ap-south-1
           role-to-assume: arn:aws:iam::941377147400:role/GitHub-Role
 
-      - name: See AWS creds
-        run: aws sts get-caller-identity
+      - name: Terraform Plan
+        run: |
+          terraform plan -no-color
 
