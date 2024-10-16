@@ -51,8 +51,11 @@ jobs:
       - name: Get Workspaces
         id: get_workspaces
         run: |
-          workspaces=$(terraform workspace list | sed 's/* //g')
-          echo "::set-output name=workspaces::$(echo $workspaces | tr '\n' ' ')"
+          workspaces=$(terraform workspace list | sed 's/* //g' | tr '\n' ' ')
+          echo "Workspaces: $workspaces"
+          # Run the Python script to generate a JSON array
+          echo "$workspaces" | python3 ./scripts/workspace_to_json.py > workspaces.json
+          workspaces=$(cat workspaces.json)
 
   Terraform_Plan:
     runs-on: [ubuntu-latest]
