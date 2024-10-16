@@ -24,10 +24,11 @@ jobs:
           terraform fmt -check -diff
           cd environments && terraform fmt -check -recursive -diff
   get_workspace_list:
+    needs: lint
     name: List Workspaces
     runs-on: [ubuntu-latest]
     outputs:
-      workspaces: ${{ steps.get_workspaces.outputs.workspaces }}
+      workspaces_csv: ${{ steps.get_workspaces.outputs.workspaces_csv }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -51,19 +52,20 @@ jobs:
       - name: Get Workspaces
         id: get_workspaces
         run: |
-          workspaces=$(terraform workspace list | sed 's/* //g' | tr '\n' ' ')
-          echo "Workspaces: $workspaces"
-          # Run the Python script to generate a JSON array
-          echo "$workspaces" | python3 ./scripts/workspace_to_json.py > workspaces.json
-          workspaces=$(cat workspaces.json)
-          echo $workspaces
+          workspaces=$(terraform workspace list | sed 's/* //g' | tr -s ' ' '\n' | tr '\n' ' ')
+          echo "Workspaces: '$workspaces'"
+          echo "$workspaces" | python3 ./scripts/workspace_to_csv.py > workspaces.csv
+          cat workspaces.csv          
+          workspaces_csv=$(cat workspaces.csv)
+          echo "Workspaces CSV: $workspaces_csv"  
 
   Terraform_Plan:
     runs-on: [ubuntu-latest]
     needs: get_workspace_list
+    if: needs.get_workspace_list.outputs.workspaces_csv != ''
     strategy:
       matrix:
-        workspace: ${{ fromJson(needs.get_workspace_list.outputs.workspaces) }}
+        workspace: ${{ fromJson(needs.get_workspace_list.outputs.workspaces | toJson) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
