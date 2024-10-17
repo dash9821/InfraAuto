@@ -1,4 +1,4 @@
-name: Terraform Plan
+name: Open PR
 on: [pull_request]
 
 permissions:
@@ -36,8 +36,7 @@ jobs:
       - name: Detect Changes
         id: detect
         run: |
-          changes=$(python ./scripts/git-diff.py | tr -d '\r')
-          echo "envs=$changes" >> "$GITHUB_OUTPUT"
+          echo "envs=$(python ./scripts/git-diff.py)" >> "$GITHUB_OUTPUT"
 
   Terraform_Plan:
     runs-on: [ubuntu-latest]
