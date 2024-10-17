@@ -36,7 +36,7 @@ jobs:
       - name: Detect Changes
         id: detect
         run: |
-          echo "envs=$(python ./scripts/git-diff.py | tr -d '\r' | jq -c .)" >> "$GITHUB_OUTPUT"
+          echo "envs=$(python ./scripts/git-diff.py | jq -c .)" >> "$GITHUB_OUTPUT"
 
   Terraform_Plan:
     runs-on: [ubuntu-latest]
