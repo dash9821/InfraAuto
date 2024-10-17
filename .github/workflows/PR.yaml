@@ -1,4 +1,4 @@
-name: Terraform Plan
+name: Open PR
 on: [pull_request]
 
 permissions:
@@ -16,42 +16,34 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          teraform_version: v1.9.7
+          terraform_version: v1.9.7
           terraform_wrapper: false
       
       - name: terraform FMT
         run: |
           terraform fmt -check -diff
           cd environments && terraform fmt -check -recursive -diff
-  get_workspace_list:
-    name: List Workspaces
+
+  Get_Changes:
+    needs: lint
     runs-on: [ubuntu-latest]
     outputs:
-      workspaces: ${{ steps.get_workspaces.outputs.workspaces }}
+      envs: ${{ steps.detect.outputs.envs }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          teraform_version: v1.9.7
-          terraform_wrapper: false
-      
-      - name: Initialize terraform 
-        run: terraform init
-
-      - name: Get Workspaces
-        id: get_workspaces
+      - name: Detect Changes
+        id: detect
         run: |
-          workspaces=$(terraform workspace list | sed 's/* //g')
-          echo "::set-output name=workspaces::$(echo $workspaces | tr '\n' ' ')"
+          echo "envs=$(python ./scripts/git-diff.py | jq -c .)" >> "$GITHUB_OUTPUT"
 
   Terraform_Plan:
-    needs: get_workspace_list
+    runs-on: [ubuntu-latest]
+    needs: [lint, Get_Changes]
     strategy:
       matrix:
-        workspace: ${{ fromJson(needs.get_workspace_list.outputs.workspaces) }}
+        workspace: ${{ fromJson(needs.Get_Changes.outputs.envs) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -59,13 +51,8 @@ jobs:
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          teraform_version: v1.9.7
+          terraform_version: v1.9.7
           terraform_wrapper: false
-      
-      - name: Initialize terraform 
-        run: |
-          terraform init
-          terraform workspace select ${{matrix.workspace}}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -73,6 +60,11 @@ jobs:
           audience: sts.amazonaws.com
           aws-region: ap-south-1
           role-to-assume: arn:aws:iam::941377147400:role/GitHub-Role
+      
+      - name: Initialize terraform 
+        run: |
+          terraform init
+          terraform workspace select ${{matrix.workspace}}
 
       - name: Terraform Plan
         run: |

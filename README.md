@@ -79,6 +79,8 @@ The directory structure of the terraform code looks like the following:
 │   │   └── asg.tf
 │   │   └── asg-vars.tf
 ├── environments
+│   ├── default
+│   │   └── vars.tf
 │   ├── nonprod
 │   │   └── vars.tf
 │   ├── staging
